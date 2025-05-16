@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { BrowserProvider, Contract,formatUnits,parseUnits } from "ethers";
+import { BrowserProvider, Contract, formatUnits, parseUnits } from "ethers";
 import ABI from "../../ABI/MarketPlaceContract.json";
 import { useNavigate } from "react-router-dom";
+import { getPinataGatewayUrl } from "../utils/pinataService";
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 
 function getProvider() {
@@ -168,17 +169,24 @@ export default function HomePage() {
             className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
           >
             <img
-              src={p.image}
+              src={getPinataGatewayUrl(p.image)}
               alt={p.name}
               className="w-full h-48 object-cover"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src =
+                  "https://via.placeholder.com/400x300?text=Image+Unavailable";
+              }}
             />
             <div className="p-5">
               <h2 className="font-bold text-xl text-gray-800 mb-3">{p.name}</h2>
               <p className="text-indigo-600 font-semibold mb-4">
-                {formatUnits(p.price,8)} HBAR
+                {formatUnits(p.price, 8)} HBAR
               </p>
               <button
-                onClick={() => handleBuy(p.id, parseUnits(formatUnits(p.price,8)))}
+                onClick={() =>
+                  handleBuy(p.id, parseUnits(formatUnits(p.price, 8)))
+                }
                 disabled={!p.available}
                 className={`w-full ${
                   p.available

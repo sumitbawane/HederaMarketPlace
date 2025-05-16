@@ -1,153 +1,261 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { BrowserProvider, Contract, parseUnits } from 'ethers'
-import ABI from '../../ABI/MarketPlaceContract.json'
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { BrowserProvider, Contract, parseEther } from 'ethers';
+import ABI from '../../ABI/MarketPlaceContract.json';
+import { uploadToPinata, getPinataGatewayUrl } from '../utils/pinataService';
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 
 function getProvider() {
-  return window.ethereum ? new BrowserProvider(window.ethereum) : null
+  return window.ethereum ? new BrowserProvider(window.ethereum) : null;
 }
 
 function getContract(signerOrProvider) {
-  return new Contract(CONTRACT_ADDRESS, ABI, signerOrProvider)
+  return new Contract(CONTRACT_ADDRESS, ABI, signerOrProvider);
 }
 
-export default function SellerProducts() {
-  // 1) Hooks always run in the same order
-  const [account,  setAccount]  = useState(null)
-  const [isSeller, setIsSeller] = useState(false)
-  const [form,     setForm]     = useState({
-    name: '', price: '', imageUrl: ''
-  })
-  const [loading,  setLoading]  = useState(false)
-  const [error,    setError]    = useState(null)
-  const [success,  setSuccess]  = useState(null)
-  const navigate = useNavigate()
+export default function ListProducts() {
+  const [account, setAccount] = useState(null);
+  const [isSeller, setIsSeller] = useState(false);
+  const [form, setForm] = useState({
+    name: '', 
+    price: '', 
+    imageFile: null,
+    ipfsHash: ''
+  });
+  const [imagePreview, setImagePreview] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const navigate = useNavigate();
 
-  // 2) Handlers defined before any conditional returns
-  const onChange = e => {
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }))
-    setError(null)
-    setSuccess(null)
-  }
+  // Handle form field changes
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
+    });
+  };
 
-  const onSubmit = useCallback(async e => {
-    e.preventDefault()
-    if (!form.name || !form.price || !form.imageUrl) {
-      setError('All fields are required')
-      return
+  // Handle file selection
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file');
+      return;
     }
-    const provider = getProvider()
-    if (!provider) {
-      setError('MetaMask not found')
-      return
+    
+    // Validate file size (limit to 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File size must be less than 5MB');
+      return;
     }
-    setLoading(true)
+    
+    // Update state and create preview
+    setForm({
+      ...form,
+      imageFile: file
+    });
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  // Upload to Pinata
+  const handlePinataUpload = async () => {
+    if (!form.imageFile) {
+      setError('Please select an image file first');
+      return;
+    }
+    
+    setUploadStatus('uploading');
+    setError(null);
+    
     try {
-      const signer   = await provider.getSigner()
-      const contract = getContract(signer)
-      await (await contract.listProduct(
+      const hash = await uploadToPinata(form.imageFile);
+      setForm({
+        ...form,
+        ipfsHash: hash
+      });
+      setUploadStatus('success');
+      setSuccess(`Image successfully uploaded to IPFS with hash: ${hash}`);
+    } catch (err) {
+      console.error('Pinata upload error:', err);
+      setError(`Failed to upload: ${err.message}`);
+      setUploadStatus('error');
+    }
+  };
+
+  // Submit form (list product)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate form
+    if (!form.name || !form.price) {
+      setError('Product name and price are required');
+      return;
+    }
+    
+    if (!form.ipfsHash) {
+      setError('Please upload an image to IPFS first');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const provider = getProvider();
+      if (!provider) throw new Error('MetaMask not found');
+      
+      const signer = await provider.getSigner();
+      const contract = getContract(signer);
+      
+      const tx = await contract.listProduct(
         form.name,
-        form.imageUrl,
-        parseUnits(form.price,8)
-      )).wait()
-      setSuccess('Product listed successfully!')
-      setForm({ name: '', price: '', imageUrl: '' })
-    } catch (e) {
-      setError(e.message)
+        form.ipfsHash,
+        parseEther(form.price)
+      );
+      
+      await tx.wait();
+      
+      setSuccess('Product listed successfully!');
+      setForm({
+        name: '',
+        price: '',
+        imageFile: null,
+        ipfsHash: ''
+      });
+      setImagePreview('');
+    } catch (err) {
+      setError(`Transaction failed: ${err.message}`);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [form])
+  };
 
-  // 3) Check connection & role on mount
+  // Check if user is a seller on component mount
   useEffect(() => {
-    const init = async () => {
-      const provider = getProvider()
-      if (!provider) {
-        setError('Please install MetaMask')
-        return
-      }
+    const checkSellerStatus = async () => {
       try {
-        const [addr] = await provider.send('eth_requestAccounts', [])
-        setAccount(addr)
-        const user = await getContract(provider).users(addr)
-        setIsSeller(user.isSeller)
-        if (!user.isSeller) {
-          navigate('/')
+        const provider = getProvider();
+        if (!provider) {
+          setError('Please install MetaMask');
+          return;
         }
-      } catch (e) {
-        setError(e.message)
+        
+        const [addr] = await provider.send('eth_requestAccounts', []);
+        setAccount(addr);
+        
+        const contract = getContract(provider);
+        const user = await contract.users(addr);
+        
+        setIsSeller(user.isSeller);
+        if (!user.isSeller) {
+          navigate('/');
+        }
+      } catch (err) {
+        setError(`Authentication error: ${err.message}`);
       }
-    }
-    init()
-  }, [navigate])
+    };
+    
+    checkSellerStatus();
+  }, [navigate]);
 
-   if (!isSeller) {
-    return <p className="text-center mt-12 text-lg text-red-600 bg-red-50 py-4 rounded-md max-w-md mx-auto">You must be a seller to list products</p>
+  if (!isSeller) {
+    return <p className="text-center mt-8">You must be a seller to list products</p>;
   }
 
   return (
-    <div className="max-w-md mx-auto mt-12 mb-16 p-8 bg-white shadow-lg rounded-lg border border-indigo-100">
-      <h2 className="text-2xl font-bold mb-6 text-indigo-700 text-center">
+    <div className="max-w-md mx-auto mt-12 p-6 bg-white shadow rounded">
+      <h2 className="text-2xl font-semibold mb-4 text-center">
         List a New Product
       </h2>
-
-      {error && 
-        <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-md border border-red-200">
-          {error}
-        </div>
-      }
       
-      {success && 
-        <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-md border border-green-200">
-          {success}
-        </div>
-      }
-
-      <form onSubmit={onSubmit} className="space-y-6">
+      {error && <div className="p-3 bg-red-100 text-red-700 rounded mb-4">{error}</div>}
+      {success && <div className="p-3 bg-green-100 text-green-700 rounded mb-4">{success}</div>}
+      
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-gray-700 font-medium mb-2">Product Name</label>
+          <label className="block text-gray-700 mb-1">Product Name</label>
           <input
+            type="text"
             name="name"
             value={form.name}
-            onChange={onChange}
-            className="w-full border border-gray-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+            onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+            required
           />
         </div>
-
+        
         <div>
-          <label className="block text-gray-700 font-medium mb-2">Price (HBAR)</label>
+          <label className="block text-gray-700 mb-1">Price (ETH)</label>
           <input
+            type="text"
             name="price"
-            value={form.price}
-            onChange={onChange}
-            className="w-full border border-gray-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+            value={formatUnits(form.price,8)}
+            onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
             placeholder="e.g. 0.05"
+            required
           />
         </div>
-
+        
         <div>
-          <label className="block text-gray-700 font-medium mb-2">Image URL</label>
+          <label className="block text-gray-700 mb-1">Product Image</label>
           <input
-            name="imageUrl"
-            value={form.imageUrl}
-            onChange={onChange}
-            className="w-full border border-gray-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-            placeholder="https://..."
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="w-full border rounded p-2"
           />
+          
+          {imagePreview && (
+            <div className="mt-2">
+              <img 
+                src={imagePreview} 
+                alt="Preview" 
+                className="w-full h-40 object-cover rounded border"
+              />
+              
+              <div className="mt-2 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={handlePinataUpload}
+                  disabled={uploadStatus === 'uploading' || uploadStatus === 'success'}
+                  className={`px-3 py-1 rounded text-white ${
+                    uploadStatus === 'success' 
+                      ? 'bg-green-500' 
+                      : uploadStatus === 'uploading'
+                        ? 'bg-gray-400'
+                        : 'bg-blue-500 hover:bg-blue-600'
+                  }`}
+                >
+                  {uploadStatus === 'uploading' ? 'Uploading...' : 
+                   uploadStatus === 'success' ? 'Uploaded ✓' : 
+                   'Upload to IPFS'}
+                </button>
+                
+                {form.ipfsHash && (
+                  <span className="text-sm text-green-600 truncate max-w-[200px]">
+                    Hash: {form.ipfsHash.slice(0, 10)}...
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-
+        
         <button
           type="submit"
-          disabled={loading}
-          className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-md font-medium shadow-md hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={loading || !form.ipfsHash}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded disabled:opacity-50"
         >
-          {loading ? 'Listing…' : 'List Product'}
+          {loading ? 'Processing...' : 'List Product'}
         </button>
       </form>
     </div>
-  )
-
+  );
 }

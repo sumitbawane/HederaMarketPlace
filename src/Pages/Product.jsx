@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { BrowserProvider, Contract, formatEther } from 'ethers'
 import ABI from '../../ABI/MarketPlaceContract.json'
-
+import { getPinataGatewayUrl } from '../utils/pinataService';
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS
 
 function getProvider() {
