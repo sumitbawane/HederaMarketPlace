@@ -69,35 +69,48 @@ export default function Login() {
   }, [account, isRegistered, navigate]);
 
   return (
-    <div className="max-w-sm mx-auto mt-12 p-6 bg-black shadow-lg rounded-lg text-center">
-      <h2 className="text-2xl font-semibold mb-6 text-white">
-        Login / Register
-      </h2>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-100 to-purple-100">
+      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-xl border border-indigo-100">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-indigo-700">DappMarket</h1>
+          <p className="text-gray-600 mt-2">Decentralized Marketplace</p>
+        </div>
 
-      {/* Step 1: Log In */}
-      {!account ? (
-        <button
-          onClick={handleLogin}
-          className="mb-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
-        >
-          Log In
-        </button>
-      ) : (
-        <p className="text-green-400 mb-4 break-words">Connected: {account}</p>
-      )}
+        <div className="space-y-6">
+          {/* Step 1: Log In */}
+          {!account ? (
+            <button
+              onClick={handleLogin}
+              className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-md font-medium shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+            >
+              Connect with MetaMask
+            </button>
+          ) : (
+            <div className="p-4 bg-indigo-50 rounded-md border border-indigo-200">
+              <p className="text-gray-700 font-medium mb-1">Connected Account:</p>
+              <p className="text-indigo-700 break-all">{account}</p>
+            </div>
+          )}
 
-      {/* Step 2: Register if needed */}
-      {account && !isRegistered && (
-        <button
-          onClick={registerOnChain}
-          disabled={isRegistering}
-          className="mb-4 bg-yellow-500 hover:bg-yellow-600 text-black py-2 px-4 rounded disabled:opacity-50"
-        >
-          {isRegistering ? "Registering…" : "Register on Network"}
-        </button>
-      )}
+          {/* Step 2: Register if needed */}
+          {account && !isRegistered && (
+            <button
+              onClick={registerOnChain}
+              disabled={isRegistering}
+              className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-md font-medium shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRegistering ? "Registering…" : "Register on Network"}
+            </button>
+          )}
 
-      {error && <p className="text-red-500 mt-4">{error}</p>}
+          {error && (
+            <div className="p-4 bg-red-50 text-red-700 rounded-md border border-red-200">
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
+
 }

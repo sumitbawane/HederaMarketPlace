@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { BrowserProvider, Contract, formatEther } from "ethers";
+import { BrowserProvider, Contract,formatUnits,parseUnits } from "ethers";
 import ABI from "../../ABI/MarketPlaceContract.json";
 import { useNavigate } from "react-router-dom";
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
@@ -19,9 +19,9 @@ export default function HomePage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const[success, setSuccess] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [requesting, setRequesting] = useState(false);
-
+  const [purchasing, setPurchasing] = useState(false);
   // 1) Connect wallet, fetch user & products
   useEffect(() => {
     const init = async () => {
@@ -83,7 +83,7 @@ export default function HomePage() {
       setTimeout(() => {
         setSuccess(null);
         navigate("/HomePage");
-      },2000)
+      }, 2000);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -107,7 +107,7 @@ export default function HomePage() {
       setTimeout(() => {
         setSuccess(null);
         navigate("/HomePage");
-      },2000)
+      }, 2000);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -115,38 +115,76 @@ export default function HomePage() {
     }
   }, [user]);
 
-  if (loading) return <p className="text-center mt-8">Loading…</p>;
-  if (error)   return <p className="text-red-500 text-center mt-8">{error}</p>;
-  if (success) return <p className="text-green-600 text-center mt-8">{success}</p>;
+  const handleBuy = useCallback(async (id, price) => {
+    setError(null);
+    setSuccess(null);
+    setPurchasing(true);
+    try {
+      const signer = await getProvider().getSigner();
+      const ctr = getContract(signer);
+      const tx = await ctr.buyProduct(id, { value: price });
+      await tx.wait();
+      setSuccess("Purchase successful!");
+      // reload products after a moment
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setPurchasing(false);
+    }
+  }, []);
+
+  if (loading)
+    return <p className="text-center mt-12 text-lg text-gray-600">Loading…</p>;
+  if (error)
+    return (
+      <p className="text-center mt-12 text-lg text-red-600 bg-red-50 py-4 rounded-md max-w-md mx-auto">
+        {error}
+      </p>
+    );
+  if (success)
+    return (
+      <p className="text-center mt-12 text-lg text-green-600 bg-green-50 py-4 rounded-md max-w-md mx-auto">
+        {success}
+      </p>
+    );
 
   return (
-    <div className="max-w-6xl mx-auto mt-8 px-4">
-      <h1 className="text-3xl font-semibold mb-6 text-center">Marketplace</h1>
+    <div className="max-w-7xl mx-auto mt-8 px-4 pb-16">
+      <div className="mb-12 text-center">
+        <h1 className="text-4xl font-bold text-indigo-700 mb-4">Marketplace</h1>
+        <p className="text-gray-600 max-w-2xl mx-auto">
+          Browse and purchase products securely on the blockchain
+        </p>
+      </div>
 
       {/* products grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-12">
         {products.map((p) => (
           <div
             key={p.id}
-            className="border rounded-lg overflow-hidden shadow hover:shadow-md transition"
+            className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
           >
             <img
               src={p.image}
               alt={p.name}
               className="w-full h-48 object-cover"
             />
-            <div className="p-4">
-              <h2 className="font-bold text-xl mb-2">{p.name}</h2>
-              <p className="text-gray-700 mb-4">
-                Price: {formatEther(p.price)} ETH
+            <div className="p-5">
+              <h2 className="font-bold text-xl text-gray-800 mb-3">{p.name}</h2>
+              <p className="text-indigo-600 font-semibold mb-4">
+                {formatUnits(p.price,8)} HBAR
               </p>
               <button
+                onClick={() => handleBuy(p.id, parseUnits(formatUnits(p.price,8)))}
                 disabled={!p.available}
                 className={`w-full ${
                   p.available
-                    ? "bg-blue-600 hover:bg-blue-700 text-white"
-                    : "bg-gray-400 text-gray-700 cursor-not-allowed"
-                } py-2 rounded`}
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                } py-2 rounded-md font-medium transition-colors duration-300`}
               >
                 {p.available ? "Buy Now" : "Sold Out"}
               </button>
@@ -157,12 +195,15 @@ export default function HomePage() {
 
       {/* request buttons - only if not already seller/admin */}
       {user && (
-        <div className="max-w-sm mx-auto space-y-4">
+        <div className="max-w-md mx-auto space-y-4 mt-12 bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">
+            Account Options
+          </h3>
           {!user.isSeller && (
             <button
               onClick={requestSeller}
               disabled={requesting}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-3 rounded-md font-medium shadow transition-all duration-200 disabled:opacity-50"
             >
               {requesting ? "Submitting…" : "Request Seller Status"}
             </button>
@@ -171,7 +212,7 @@ export default function HomePage() {
             <button
               onClick={requestAdmin}
               disabled={requesting}
-              className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-black text-white py-3 rounded-md font-medium shadow transition-all duration-200 disabled:opacity-50"
             >
               {requesting ? "Submitting…" : "Request Admin Role"}
             </button>

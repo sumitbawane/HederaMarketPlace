@@ -112,57 +112,63 @@ export default function OwnerPage() {
     }
   }, [revokeAdmin, load]);
 
-  if (loading) return <p className="mt-8 text-center">Loading…</p>;
-  if (error) return <p className="mt-8 text-red-500 text-center">{error}</p>;
+  if (loading) return <p className="text-center mt-12 text-lg text-gray-600">Loading…</p>;
+  if (error) return <p className="text-center mt-12 text-lg text-red-600 bg-red-50 py-4 rounded-md max-w-md mx-auto">{error}</p>;
 
   return (
-    <div className="max-w-xl mx-auto mt-12 p-6 bg-white shadow rounded">
-      <h2 className="text-2xl font-semibold mb-4">Admin Role Requests</h2>
+    <div className="max-w-4xl mx-auto mt-12 mb-16 p-8 bg-white shadow-lg rounded-lg border border-indigo-100">
+      <h2 className="text-2xl font-bold mb-6 text-indigo-700">Admin Role Requests</h2>
+      
       {requests.length === 0 ? (
-        <p className="text-gray-600">No pending requests.</p>
+        <div className="p-6 bg-gray-50 text-gray-600 rounded-md border border-gray-200 text-center">
+          No pending requests.
+        </div>
       ) : (
-        requests.map((r) => (
-          <div
-            key={r.id}
-            className="flex items-center justify-between mb-3 p-3 border rounded"
-          >
-            <div>
-              <p>
-                <strong>#{r.id}</strong> – {r.applicant}
-              </p>
-              <p className="text-sm text-gray-500">{r.when}</p>
+        <div className="space-y-4">
+          {requests.map((r) => (
+            <div
+              key={r.id}
+              className="flex items-center justify-between p-5 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+            >
+              <div>
+                <p className="mb-1">
+                  <span className="text-indigo-700 font-semibold">Request #{r.id}</span>
+                </p>
+                <p className="text-gray-700 font-mono text-sm">{r.applicant}</p>
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => act(r.id, true)}
+                  className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-md transition-colors"
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={() => act(r.id, false)}
+                  className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-md transition-colors"
+                >
+                  Reject
+                </button>
+              </div>
             </div>
-            <div className="space-x-2">
-              <button
-                onClick={() => act(r.id, true)}
-                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded"
-              >
-                Approve
-              </button>
-              <button
-                onClick={() => act(r.id, false)}
-                className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded"
-              >
-                Reject
-              </button>
-            </div>
-          </div>
-        ))
+          ))}
+        </div>
       )}
-      <div className="mt-8 border-t pt-6">
-        <h3 className="text-xl font-semibold mb-2">Revoke Admin Status</h3>
-        <div className="flex space-x-2">
+      
+      <div className="mt-12 pt-6 border-t border-gray-200">
+        <h3 className="text-xl font-bold mb-4 text-indigo-700">Revoke Admin Status</h3>
+        <div className="flex space-x-3">
           <input
             type="text"
             placeholder="0xUserAddress"
             value={revokeAdmin}
             onChange={(e) => setRevokeAdmin(e.target.value)}
-            className="flex-1 border rounded px-3 py-2"
+            className="flex-1 border border-gray-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
           />
           <button
             onClick={handleRevokeAdmin}
             disabled={revokingAdmin}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded disabled:opacity-50"
+            className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {revokingAdmin ? "Revoking…" : "Revoke"}
           </button>
