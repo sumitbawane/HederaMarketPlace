@@ -172,11 +172,6 @@ export default function HomePage() {
               src={getPinataGatewayUrl(p.image)}
               alt={p.name}
               className="w-full h-48 object-cover"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src =
-                  "https://via.placeholder.com/400x300?text=Image+Unavailable";
-              }}
             />
             <div className="p-5">
               <h2 className="font-bold text-xl text-gray-800 mb-3">{p.name}</h2>

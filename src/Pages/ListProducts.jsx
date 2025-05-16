@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BrowserProvider, Contract, parseEther } from 'ethers';
+import { BrowserProvider, Contract, parseEther,formatUnits, parseUnits } from 'ethers';
 import ABI from '../../ABI/MarketPlaceContract.json';
 import { uploadToPinata, getPinataGatewayUrl } from '../utils/pinataService';
 
@@ -116,7 +116,7 @@ export default function ListProducts() {
       const tx = await contract.listProduct(
         form.name,
         form.ipfsHash,
-        parseEther(form.price)
+        parseUnits(form.price,8)
       );
       
       await tx.wait();
@@ -195,7 +195,7 @@ export default function ListProducts() {
           <input
             type="text"
             name="price"
-            value={formatUnits(form.price,8)}
+            value={form.price}
             onChange={handleChange}
             className="w-full border rounded px-3 py-2"
             placeholder="e.g. 0.05"
