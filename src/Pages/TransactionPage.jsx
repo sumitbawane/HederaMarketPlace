@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { BrowserProvider, Contract, formatUnits } from "ethers";
 import ABI from "../../ABI/MarketPlaceContract.json";
 import { useNavigate } from "react-router-dom";
+import { getPinataGatewayUrl } from "../utils/pinataService";
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 const TX_TYPE_LABELS   = ["List", "Purchase"];
@@ -39,18 +40,21 @@ export default function Transactions() {
         const me     = addr.toLowerCase();
         if (buyer !== me && seller !== me) continue;
 
-        const details = await ctr.getProductDetails(rec.productId);
-        const status  = details.isAvailable ? "Available" : "Sold Out";
-
+        // Get full product details including name and image
+        const productId = Number(rec.productId);
+        const product = await ctr.products(productId);
+        
         txs.push({
           id:           Number(rec.id),
           txType:       TX_TYPE_LABELS[Number(rec.txType)] || `Type ${rec.txType}`,
-          productId:    Number(rec.productId),
-          buyer:       buyer,
-          seller:     seller,
+          productId:    productId,
+          productName:  product.name,
+          productImage: product.ipfsHash,
+          buyer:        buyer,
+          seller:       seller,
           price:        formatUnits(rec.price, 8),
           when:         new Date(Number(rec.timestamp) * 1000).toLocaleString(),
-          status
+          status:       product.isAvailable ? "Available" : "Sold Out"
         });
       }
       setTransactions(txs);
@@ -65,9 +69,9 @@ export default function Transactions() {
     loadTransactions();
   }, [loadTransactions]);
 
-  if (loading) return <div>Loading…</div>;
-  if (error)   return <div className="text-red-600">{error}</div>;
-  if (!transactions.length) return <div>No transactions found.</div>;
+  if (loading) return <div className="p-8 text-center text-lg text-gray-600">Loading transactions...</div>;
+  if (error)   return <div className="p-8 text-center text-lg text-red-600 bg-red-50 py-4 rounded-md max-w-md mx-auto">{error}</div>;
+  if (!transactions.length) return <div className="p-8 text-center text-lg text-gray-600">No transactions found.</div>;
 
   // split into listings/sales vs purchases
   const sellingTxs  = transactions.filter(tx => tx.txType === "List");
@@ -89,7 +93,7 @@ export default function Transactions() {
               <thead>
                 <tr className="bg-gradient-to-r from-indigo-50 to-purple-50 text-gray-700">
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Txn ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Product ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Product</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Status</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase">Price (HBAR)</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Date</th>
@@ -99,7 +103,23 @@ export default function Transactions() {
                 {sellingTxs.map(tx => (
                   <tr key={tx.id} className="hover:bg-indigo-50 transition-colors duration-150">
                     <td className="px-4 py-3">{tx.id}</td>
-                    <td className="px-4 py-3">{tx.productId}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center space-x-3">
+                        {tx.productImage && (
+                          <div className="flex-shrink-0 h-10 w-10">
+                            <img 
+                              src={getPinataGatewayUrl(tx.productImage)} 
+                              alt={tx.productName}
+                              className="h-10 w-10 rounded-md object-cover" 
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-gray-800">{tx.productName}</p>
+                          <p className="text-xs text-gray-500">ID: {tx.productId}</p>
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 font-medium">{tx.status}</td>
                     <td className="px-4 py-3 text-right font-medium text-indigo-700">{tx.price}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{tx.when}</td>
@@ -124,6 +144,7 @@ export default function Transactions() {
               <thead>
                 <tr className="bg-gradient-to-r from-green-50 to-teal-50 text-gray-700">
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Txn ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Product</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Seller</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase">Price (HBAR)</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Date</th>
@@ -133,7 +154,26 @@ export default function Transactions() {
                 {purchaseTxs.map(tx => (
                   <tr key={tx.id} className="hover:bg-green-50 transition-colors duration-150">
                     <td className="px-4 py-3">{tx.id}</td>
-                    <td className="px-4 py-3 font-mono">{tx.seller}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center space-x-3">
+                        {tx.productImage && (
+                          <div className="flex-shrink-0 h-10 w-10">
+                            <img 
+                              src={getPinataGatewayUrl(tx.productImage)} 
+                              alt={tx.productName}
+                              className="h-10 w-10 rounded-md object-cover" 
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-gray-800">{tx.productName}</p>
+                          <p className="text-xs text-gray-500">ID: {tx.productId}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-xs font-mono text-gray-500">{tx.seller}</p>
+                    </td>
                     <td className="px-4 py-3 text-right font-medium text-green-700">{tx.price}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{tx.when}</td>
                   </tr>

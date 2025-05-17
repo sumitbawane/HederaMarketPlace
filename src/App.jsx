@@ -1,5 +1,6 @@
 // src/App.jsx (update)
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React, { useEffect } from "react";
+import { BrowserRouter, Routes, Route,useNavigate } from "react-router-dom";
 import Login from "./Pages/Login";
 import Products from "./Pages/Product";
 import ListProducts from "./Pages/ListProducts";
@@ -11,10 +12,30 @@ import Navbar from "./components/Navbar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import "./App.css";
 
+
+function AccountChangeHandler() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (window.ethereum) {
+      const onAccountsChanged = () => {
+        navigate("/");
+      }
+      window.ethereum.on("accountsChanged", onAccountsChanged)
+      return () => {
+        window.ethereum.removeListener("accountsChanged", onAccountsChanged)
+      }
+    }
+  }, [navigate])
+}
+
 export default function App() {
+ 
+
+
   return (
     <div className="min-h-screen bg-gray-50">
       <BrowserRouter>
+        <AccountChangeHandler />
         <Routes>
           <Route path="/" element={<Login />} />
           <Route
