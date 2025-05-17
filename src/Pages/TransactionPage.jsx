@@ -74,8 +74,8 @@ export default function Transactions() {
   if (!transactions.length) return <div className="p-8 text-center text-lg text-gray-600">No transactions found.</div>;
 
   // split into listings/sales vs purchases
-  const sellingTxs  = transactions.filter(tx => tx.txType === "List");
-  const purchaseTxs = transactions.filter(tx => tx.txType === "Purchase");
+  const sellingTxs  = transactions.filter(tx => tx.txType === "List" && tx.seller === account);
+  const purchaseTxs = transactions.filter(tx => tx.txType === "Purchase" && tx.buyer === account);
 
   return (
     <div className="max-w-6xl mx-auto mt-8 mb-16 p-8 bg-white shadow-lg rounded-lg border border-indigo-100 space-y-12">

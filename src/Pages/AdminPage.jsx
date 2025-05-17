@@ -46,6 +46,8 @@ export default function AdminPage() {
   // 2) load pending seller requests
   const load = useCallback(async () => {
     try {
+      setLoading(true);
+      setError(null);
       const prov = getProvider();
       const ctr = getContract(prov);
       const cnt = Number(await ctr.getSellerRequestCount());
