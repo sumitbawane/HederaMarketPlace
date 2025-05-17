@@ -38,6 +38,9 @@ export default function Navbar() {
                   Owner
                 </Link>
               )}
+              <Link to="/transactions" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500 transition">
+                Transactions
+                </Link>
             </div>
           )}
         </div>

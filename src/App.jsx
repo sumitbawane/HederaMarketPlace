@@ -6,6 +6,7 @@ import ListProducts from "./Pages/ListProducts";
 import AdminPage from "./Pages/AdminPage";
 import OwnerPage from "./Pages/OwnerPage";
 import HomePage from "./Pages/HomePage";
+import Transactions from "./Pages/TransactionPage";
 import Navbar from "./components/Navbar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import "./App.css";
@@ -16,6 +17,17 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login />} />
+          <Route
+            path="transactions"
+            element={
+              <>
+               <Navbar />
+               <Transactions />
+              </>
+               
+              
+            }
+          />
           <Route 
             path="/HomePage" 
             element={

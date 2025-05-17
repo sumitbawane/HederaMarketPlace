@@ -128,10 +128,15 @@ export default function HomePage() {
       setSuccess("Purchase successful!");
       // reload products after a moment
       setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+        setSuccess(null);
+        navigate("/HomePage");
+      }, 2000);
     } catch (e) {
       setError(e.message);
+      setTimeout(() => {
+        setError(null);
+        navigate("/HomePage");
+      }, 2000);
     } finally {
       setPurchasing(false);
     }
@@ -142,7 +147,7 @@ export default function HomePage() {
   if (error)
     return (
       <p className="text-center mt-12 text-lg text-red-600 bg-red-50 py-4 rounded-md max-w-md mx-auto">
-        {error}
+      seller cannot buy own product
       </p>
     );
   if (success)
